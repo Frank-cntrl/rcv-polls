@@ -26,7 +26,8 @@
   align-items: center;
 }
 
-.auth-links {
+.auth-links,
+.user-links {
   display: flex;
   gap: 1rem;
   align-items: center;
@@ -45,15 +46,10 @@
   background-color: #e9ecef;
 }
 
-.user-section {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.username {
+.user-name {
   color: #666;
   font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .logout-btn {

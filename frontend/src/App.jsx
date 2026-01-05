@@ -8,6 +8,9 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Home from "./components/Home";
 import NotFound from "./components/NotFound";
+import CreatePoll from "./components/CreatePoll";
+import PollView from "./components/PollView";
+import PollResults from "./components/PollResults";
 import { API_URL, SOCKETS_URL, NODE_ENV } from "./shared";
 import { io } from "socket.io-client";
 
@@ -64,7 +67,10 @@ const App = () => {
         <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route path="/signup" element={<Signup setUser={setUser} />} />
-          <Route exact path="/" element={<Home />} />
+          <Route exact path="/" element={<Home user={user} />} />
+          <Route path="/create-poll" element={<CreatePoll user={user} />} />
+          <Route path="/poll/:shareId" element={<PollView user={user} />} />
+          <Route path="/poll/:shareId/results" element={<PollResults />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
