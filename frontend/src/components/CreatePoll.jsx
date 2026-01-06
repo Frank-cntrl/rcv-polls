@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_URL } from "../shared";
-import "./CreatePollStyles.css";
 
 const CreatePoll = ({ user }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     options: ["", ""],
+    isAnonymous: true,
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +89,7 @@ const CreatePoll = ({ user }) => {
           title: formData.title,
           description: formData.description || null,
           options: formData.options.filter((opt) => opt && opt.trim().length > 0),
+          isAnonymous: formData.isAnonymous,
         },
         { withCredentials: true }
       );
@@ -107,91 +108,170 @@ const CreatePoll = ({ user }) => {
 
   if (!user) {
     return (
-      <div className="create-poll-container">
-        <div className="auth-message">
-          <p>Please log in to create a poll.</p>
+      <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-gray-600">Please log in to create a poll.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="create-poll-container">
-      <div className="create-poll-form">
-        <h2>Create a New Poll</h2>
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md p-6 sm:p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Create a New Poll
+          </h2>
 
-        {errors.general && (
-          <div className="error-message">{errors.general}</div>
-        )}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+              {errors.general}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="title">Poll Title *</label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className={errors.title ? "error" : ""}
-              placeholder="e.g., Best Programming Language?"
-              maxLength={200}
-            />
-            {errors.title && (
-              <span className="error-text">{errors.title}</span>
-            )}
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label
+                htmlFor="title"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Poll Title *
+              </label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.title
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
+                placeholder="e.g., Best Programming Language?"
+                maxLength={200}
+              />
+              {errors.title && (
+                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+              )}
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="description">Description (optional)</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Add a description for your poll..."
-              rows={3}
-            />
-          </div>
+            <div>
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Description (optional)
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Add a description for your poll..."
+                rows={3}
+              />
+            </div>
 
-          <div className="form-group">
-            <label>Poll Options *</label>
-            {errors.options && (
-              <span className="error-text">{errors.options}</span>
-            )}
-            {formData.options.map((option, index) => (
-              <div key={index} className="option-input-group">
-                <input
-                  type="text"
-                  value={option}
-                  onChange={(e) => handleOptionChange(index, e.target.value)}
-                  placeholder={`Option ${index + 1}`}
-                  className={errors.options ? "error" : ""}
-                />
-                {formData.options.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => removeOption(index)}
-                    className="remove-option-btn"
-                  >
-                    Remove
-                  </button>
-                )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Poll Settings
+              </label>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      isAnonymous: !prev.isAnonymous,
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                    formData.isAnonymous
+                      ? "bg-gray-200"
+                      : "bg-primary-600"
+                  }`}
+                  role="switch"
+                  aria-checked={!formData.isAnonymous}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      formData.isAnonymous
+                        ? "translate-x-0"
+                        : "translate-x-5"
+                    }`}
+                  />
+                </button>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {formData.isAnonymous ? "Anonymous" : "Non-Anonymous"}
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    {formData.isAnonymous
+                      ? "Votes are anonymous"
+                      : "One vote per person. Creator can see who voted."}
+                  </p>
+                </div>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={addOption}
-              className="add-option-btn"
-            >
-              + Add Option
-            </button>
-          </div>
+            </div>
 
-          <button type="submit" disabled={isLoading} className="submit-btn">
-            {isLoading ? "Creating Poll..." : "Create Poll"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Poll Options *
+              </label>
+              {errors.options && (
+                <p className="mb-2 text-sm text-red-600">{errors.options}</p>
+              )}
+              <div className="space-y-2">
+                {formData.options.map((option, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) =>
+                        handleOptionChange(index, e.target.value)
+                      }
+                      placeholder={`Option ${index + 1}`}
+                      className={`flex-1 px-4 py-2 border rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 ${
+                        errors.options
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    {formData.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(index)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addOption}
+                className="mt-2 px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-md transition-colors"
+              >
+                + Add Option
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? "Creating Poll..." : "Create Poll"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -61,19 +61,17 @@ const App = () => {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <NavBar user={user} onLogout={handleLogout} />
-      <div className="app">
-        <Routes>
-          <Route path="/login" element={<Login setUser={setUser} />} />
-          <Route path="/signup" element={<Signup setUser={setUser} />} />
-          <Route exact path="/" element={<Home user={user} />} />
-          <Route path="/create-poll" element={<CreatePoll user={user} />} />
-          <Route path="/poll/:shareId" element={<PollView user={user} />} />
-          <Route path="/poll/:shareId/results" element={<PollResults />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/login" element={<Login setUser={setUser} />} />
+        <Route path="/signup" element={<Signup setUser={setUser} />} />
+        <Route exact path="/" element={<Home user={user} />} />
+        <Route path="/create-poll" element={<CreatePoll user={user} />} />
+        <Route path="/poll/:shareId" element={<PollView user={user} />} />
+        <Route path="/poll/:shareId/results" element={<PollResults />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </div>
   );
 };
