@@ -23,13 +23,13 @@ const Poll = db.define("poll", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  isAnonymous: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
   creatorId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      model: "users",
-      key: "id",
-    },
   },
 });
 

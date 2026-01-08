@@ -1,7 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const { Poll, PollOption, Ballot, BallotRank } = require("../database");
+const { Poll, PollOption, Ballot, BallotRank, User } = require("../database");
 const { emitNewVote } = require("../socket-server");
+const crypto = require("crypto");
+
+// Generate a unique identifier for anonymous voters
+const generateVoterIdentifier = (req) => {
+  // Use IP address and user agent to create a unique identifier
+  const ip = req.ip || req.connection.remoteAddress || "unknown";
+  const userAgent = req.get("user-agent") || "unknown";
+  return crypto
+    .createHash("sha256")
+    .update(`${ip}-${userAgent}`)
+    .digest("hex")
+    .substring(0, 16);
+};
 
 // Submit a ballot (vote)
 router.post("/:shareId", async (req, res) => {
@@ -21,6 +34,54 @@ router.post("/:shareId", async (req, res) => {
 
     if (poll.isClosed) {
       return res.status(400).send({ error: "This poll is closed" });
+    }
+
+    // For non-anonymous polls, check if user has already voted and validate name
+    if (!poll.isAnonymous) {
+      // Check if user is logged in
+      const token = req.cookies?.token;
+      let userId = null;
+      
+      if (token) {
+        try {
+          const jwt = require("jsonwebtoken");
+          const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+          const decoded = jwt.verify(token, JWT_SECRET);
+          userId = decoded.id;
+        } catch (err) {
+          // Invalid token, user not logged in
+        }
+      }
+
+      // Require voter name if user is not logged in
+      if (!userId && !voterName?.trim()) {
+        return res.status(400).send({
+          error: "Your name is required for non-anonymous polls",
+        });
+      }
+
+      // Check for existing vote
+      if (userId) {
+        const existingBallot = await Ballot.findOne({
+          where: { pollId: poll.id, voterId: userId },
+        });
+        if (existingBallot) {
+          return res.status(400).send({
+            error: "You have already voted in this poll",
+          });
+        }
+      } else {
+        // For non-logged-in users, use identifier
+        const voterIdentifier = generateVoterIdentifier(req);
+        const existingBallot = await Ballot.findOne({
+          where: { pollId: poll.id, voterIdentifier },
+        });
+        if (existingBallot) {
+          return res.status(400).send({
+            error: "You have already voted in this poll. Please log in to vote again.",
+          });
+        }
+      }
     }
 
     // Validate rankings
@@ -68,10 +129,35 @@ router.post("/:shareId", async (req, res) => {
       });
     }
 
+    // Determine voter identity
+    const token = req.cookies?.token;
+    let userId = null;
+    let voterIdentifier = null;
+
+    if (token) {
+      try {
+        const jwt = require("jsonwebtoken");
+        const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.id;
+      } catch (err) {
+        // Invalid token
+      }
+    }
+
+    // For non-anonymous polls, we need to track the voter
+    if (!poll.isAnonymous) {
+      if (!userId) {
+        voterIdentifier = generateVoterIdentifier(req);
+      }
+    }
+
     // Create ballot
     const ballot = await Ballot.create({
       pollId: poll.id,
       voterName: voterName?.trim() || null,
+      voterId: userId,
+      voterIdentifier: voterIdentifier,
     });
 
     // Create ballot ranks
@@ -79,8 +165,8 @@ router.post("/:shareId", async (req, res) => {
       rankings.map((ranking) =>
         BallotRank.create({
           ballotId: ballot.id,
-          pollOptionId: ranking.pollOptionId,
-          rank: ranking.rank,
+          pollOptionId: parseInt(ranking.pollOptionId),
+          rank: parseInt(ranking.rank),
         })
       )
     );
@@ -97,7 +183,11 @@ router.post("/:shareId", async (req, res) => {
     });
   } catch (error) {
     console.error("Error submitting ballot:", error);
-    res.sendStatus(500);
+    console.error("Error stack:", error.stack);
+    res.status(500).send({
+      error: "Failed to submit ballot",
+      message: error.message,
+    });
   }
 });
 

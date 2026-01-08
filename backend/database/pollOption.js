@@ -13,10 +13,6 @@ const PollOption = db.define("pollOption", {
   pollId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      model: "polls",
-      key: "id",
-    },
   },
   order: {
     type: DataTypes.INTEGER,

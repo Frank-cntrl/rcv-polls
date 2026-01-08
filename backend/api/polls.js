@@ -10,10 +10,65 @@ const generateShareId = () => {
   return crypto.randomBytes(8).toString("hex");
 };
 
+// Get all polls (public or user-specific based on auth and query params)
+router.get("/", async (req, res) => {
+  try {
+    const { type } = req.query; // 'all' for all public polls, default for user polls
+    
+    const token = req.cookies?.token;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const jwt = require("jsonwebtoken");
+        const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.id;
+      } catch (err) {
+        // Invalid token, continue without user ID
+      }
+    }
+    
+    if (type === "all") {
+      // Return all public polls (non-anonymous or all polls for now)
+      const polls = await Poll.findAll({
+        include: [
+          { model: PollOption, as: "options", order: [["order", "ASC"]] },
+          { model: User, as: "creator", attributes: ["id", "username"] },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: 50, // Limit to prevent overwhelming response
+      });
+      
+      return res.send({ polls });
+    }
+    
+    // Default behavior: return user's polls if authenticated
+    if (userId) {
+      const polls = await Poll.findAll({
+        where: { creatorId: userId },
+        include: [
+          { model: PollOption, as: "options", order: [["order", "ASC"]] },
+          { model: User, as: "creator", attributes: ["id", "username"] },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+      
+      return res.send({ polls });
+    }
+    
+    // Return empty array for unauthenticated users
+    res.send({ polls: [] });
+  } catch (error) {
+    console.error("Error fetching polls:", error);
+    res.sendStatus(500);
+  }
+});
+
 // Create a new poll
 router.post("/", authenticateJWT, async (req, res) => {
   try {
-    const { title, description, options } = req.body;
+    const { title, description, options, isAnonymous } = req.body;
 
     if (!title || !options || !Array.isArray(options) || options.length < 2) {
       return res.status(400).send({
@@ -42,6 +97,7 @@ router.post("/", authenticateJWT, async (req, res) => {
       title: title.trim(),
       description: description?.trim() || null,
       shareId,
+      isAnonymous: isAnonymous !== undefined ? isAnonymous : true,
       creatorId: req.user.id,
     });
 
@@ -162,6 +218,54 @@ router.post("/:id/close", authenticateJWT, async (req, res) => {
     res.send({ poll });
   } catch (error) {
     console.error("Error closing poll:", error);
+    res.sendStatus(500);
+  }
+});
+
+// Get voter list for non-anonymous polls (creator only)
+router.get("/:id/voters", authenticateJWT, async (req, res) => {
+  try {
+    const poll = await Poll.findOne({
+      where: { id: req.params.id, creatorId: req.user.id },
+    });
+
+    if (!poll) {
+      return res.status(404).send({ error: "Poll not found" });
+    }
+
+    if (poll.isAnonymous) {
+      return res.status(400).send({
+        error: "Voter list is not available for anonymous polls",
+      });
+    }
+
+    // Get all ballots with voter information
+    const ballots = await Ballot.findAll({
+      where: { pollId: poll.id },
+      include: [
+        {
+          model: User,
+          as: "voter",
+          attributes: ["id", "username", "email"],
+          required: false,
+        },
+      ],
+      order: [["submittedAt", "DESC"]],
+    });
+
+    // Format voter list
+    const voters = ballots.map((ballot) => ({
+      id: ballot.id,
+      voterName: ballot.voterName,
+      username: ballot.voter?.username || null,
+      email: ballot.voter?.email || null,
+      isLoggedIn: !!ballot.voterId,
+      submittedAt: ballot.submittedAt,
+    }));
+
+    res.send({ voters, totalVotes: voters.length });
+  } catch (error) {
+    console.error("Error fetching voters:", error);
     res.sendStatus(500);
   }
 });

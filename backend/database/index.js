@@ -15,6 +15,9 @@ PollOption.belongsTo(Poll, { foreignKey: "pollId", as: "poll" });
 Poll.hasMany(Ballot, { foreignKey: "pollId", as: "ballots" });
 Ballot.belongsTo(Poll, { foreignKey: "pollId", as: "poll" });
 
+User.hasMany(Ballot, { foreignKey: "voterId", as: "ballots" });
+Ballot.belongsTo(User, { foreignKey: "voterId", as: "voter" });
+
 Ballot.hasMany(BallotRank, { foreignKey: "ballotId", as: "ranks" });
 BallotRank.belongsTo(Ballot, { foreignKey: "ballotId", as: "ballot" });
 
